@@ -47,7 +47,7 @@ dependencies = [
  "getrandom",
  "js-sys",
  "log",
- "miniscript 9.0.1",
+ "miniscript 9.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand",
  "serde",
  "serde_json",
@@ -211,7 +211,7 @@ dependencies = [
  "elements",
  "elements-miniscript",
  "log",
- "miniscript 9.0.1",
+ "miniscript 9.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_json",
  "unicode-normalization",
@@ -268,11 +268,11 @@ dependencies = [
 [[package]]
 name = "elements-miniscript"
 version = "0.1.0"
-source = "git+https://github.com/ElementsProject/elements-miniscript.git#6042fd4e2c3b6fd4419a210980226217b828bcd9"
+source = "git+https://github.com/ncrashed/elements-miniscript.git?rev=d84baaaadd29869d87ca3d4149bf5a1cc52db6c8#d84baaaadd29869d87ca3d4149bf5a1cc52db6c8"
 dependencies = [
  "bitcoin 0.29.2",
  "elements",
- "miniscript 9.0.0",
+ "miniscript 9.0.1 (git+https://github.com/rust-bitcoin/rust-miniscript?rev=424a57a0618e343f630eefe14bf5e577515ce081)",
 ]
 
 [[package]]
@@ -370,20 +370,20 @@ dependencies = [
 
 [[package]]
 name = "miniscript"
-version = "9.0.0"
-source = "git+https://github.com/rust-bitcoin/rust-miniscript?rev=1351c20a5ead4f308e18bce88cc01983c7d0e876#1351c20a5ead4f308e18bce88cc01983c7d0e876"
-dependencies = [
- "bitcoin 0.29.2",
-]
-
-[[package]]
-name = "miniscript"
 version = "9.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9601439f168c13bdc5bf84349c2e61c815be4a4dcebe8c4ff4af58f4e8a6d20"
 dependencies = [
  "bitcoin 0.29.2",
  "serde",
+]
+
+[[package]]
+name = "miniscript"
+version = "9.0.1"
+source = "git+https://github.com/rust-bitcoin/rust-miniscript?rev=424a57a0618e343f630eefe14bf5e577515ce081#424a57a0618e343f630eefe14bf5e577515ce081"
+dependencies = [
+ "bitcoin 0.29.2",
 ]
 
 [[package]]
