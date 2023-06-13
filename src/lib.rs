@@ -1,38 +1,24 @@
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
-use std::error;
-use std::fmt;
-use std::str::FromStr;
 
 pub extern crate bdk;
 pub extern crate bip39;
 pub extern crate elements_miniscript as miniscript;
-pub extern crate serde;
 pub extern crate log;
+pub extern crate serde;
 
-use bdk::TransactionDetails;
-use miniscript::bitcoin::network::constants::Network;
-use miniscript::bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use miniscript::elements::confidential::{
-    self, Asset, AssetBlindingFactor, Nonce, Value, ValueBlindingFactor,
+    self, Asset, AssetBlindingFactor, Nonce, ValueBlindingFactor,
 };
 use miniscript::elements::encode::deserialize as elm_des;
-use miniscript::elements::encode::serialize as elm_ser;
 use miniscript::elements::secp256k1_zkp::{All, PublicKey, Secp256k1};
 use miniscript::elements::slip77::MasterBlindingKey;
 use miniscript::elements::TxOutSecrets;
 use miniscript::elements::{Address, AddressParams};
-use miniscript::{Descriptor, DescriptorPublicKey };
-use miniscript::descriptor::*;
+use miniscript::{Descriptor, DescriptorPublicKey};
 
-use bdk::blockchain::Blockchain;
-use bdk::database::memory::MemoryDatabase;
-use bdk::database::{BatchDatabase, BatchOperations, Database};
-use bdk::electrum_client::{
-    Client, ConfigBuilder, ElectrumApi, GetHistoryRes, ListUnspentRes, Socks5Config,
-};
-use serde::{Deserialize, Serialize};
-
+use bdk::database::BatchDatabase;
+use bdk::electrum_client::{Client, ElectrumApi, GetHistoryRes};
 use log::*;
 
 pub enum ScriptType {
@@ -41,30 +27,30 @@ pub enum ScriptType {
     P2pkh = 2,
 }
 
-#[derive(Default,Debug)]
+#[derive(Default, Debug)]
 pub struct DownloadTxResult {
     pub txs: Vec<(elements::Txid, elements::Transaction)>,
     pub unblinds: Vec<(elements::OutPoint, elements::TxOutSecrets)>,
 }
 
-#[derive(Default,Debug,Clone)]
+#[derive(Default, Debug, Clone)]
 pub struct EDKTransactionDetails {
     pub txs: Vec<(elements::Txid, elements::Transaction, i32)>,
     pub unblinds: Vec<(elements::OutPoint, elements::TxOutSecrets, i32)>,
 }
 
-#[derive(Debug,Clone)]
+#[derive(Debug, Clone)]
 pub struct EDKBalanceOutput {
-    pub asset : String,
-    pub txid : elements::Txid,
-    pub value : u64,
-    pub height : i32
+    pub asset: String,
+    pub txid: elements::Txid,
+    pub value: u64,
+    pub height: i32,
 }
 
-#[derive(Debug,Clone)]
-pub struct TxWithHeight{
-    tx : elements::Transaction,
-    tx_height : i32
+#[derive(Debug, Clone)]
+pub struct TxWithHeight {
+    tx: elements::Transaction,
+    tx_height: i32,
 }
 
 pub struct Wallet<D> {
@@ -122,7 +108,7 @@ where
 
     // Return a newly derived address using the external descriptor
     pub fn get_new_address(&self) -> Result<Address, bdk::Error> {
-        let index = match self.descriptor.is_deriveable() {
+        let index = match self.descriptor.has_wildcard() {
             false => 0,
             true => self
                 .database
@@ -151,10 +137,9 @@ where
         Ok(self.get_previous_addresses()?.contains(addr))
     }
 
-    pub fn list_transactions(&self) -> Result<EDKTransactionDetails,bdk::Error> {
+    pub fn list_transactions(&self) -> Result<EDKTransactionDetails, bdk::Error> {
         let addrs: Vec<Address> = self.get_previous_addresses()?;
         Ok(self.balance_addresses_with_height(addrs)?)
-        
     }
 
     pub fn balance(&self) -> Result<HashMap<String, u64>, bdk::Error> {
@@ -162,29 +147,29 @@ where
         let mut balances = HashMap::new();
 
         for unblind in self.balance_addresses(addrs)?.unblinds {
-            info!("unblinded tx: {:?}",unblind.clone()); 
+            info!("unblinded tx: {:?}", unblind.clone());
             let tx_out = unblind.1;
             *balances.entry(tx_out.asset.to_string()).or_insert(0) += tx_out.value;
         }
         Ok(balances)
     }
 
-    pub fn balance_with_height(&self) -> Result<Vec<(String, u64,i32)>, bdk::Error> {
+    pub fn balance_with_height(&self) -> Result<Vec<(String, u64, i32)>, bdk::Error> {
         let addrs: Vec<Address> = self.get_previous_addresses()?;
-        let mut balances = vec![]; 
+        let mut balances = vec![];
         let bawh = self.balance_addresses_with_height(addrs)?;
 
         for unblind in bawh.unblinds {
             let tx_out = unblind.1;
             let tx_height = unblind.2;
-            balances.push((tx_out.asset.to_string(),tx_out.value,tx_height));
+            balances.push((tx_out.asset.to_string(), tx_out.value, tx_height));
         }
         Ok(balances)
     }
 
     pub fn balance_with_txid_and_height(&self) -> Result<Vec<EDKBalanceOutput>, bdk::Error> {
         let addrs: Vec<Address> = self.get_previous_addresses()?;
-        let mut balances = vec![]; 
+        let mut balances = vec![];
         let bawh = self.balance_addresses_with_height(addrs)?;
 
         for unblind in bawh.unblinds {
@@ -192,21 +177,20 @@ where
             let tx_height = unblind.2;
             let tx_id = unblind.0.txid;
             let bal_output = EDKBalanceOutput {
-                asset : tx_out.asset.to_string(),
-                txid : tx_id,
-                value : tx_out.value,
-                height : tx_height
+                asset: tx_out.asset.to_string(),
+                txid: tx_id,
+                value: tx_out.value,
+                height: tx_height,
             };
             balances.push(bal_output);
         }
         Ok(balances)
     }
 
-    pub fn balance_addresses_with_height(&self, addrs: Vec<Address>) -> Result<EDKTransactionDetails, bdk::Error> {
-        //let client = Client::new("ssl://blockstream.info:995").unwrap();
-
-        let mut history_txs_id = HashSet::<elements::Txid>::new();
-
+    pub fn balance_addresses_with_height(
+        &self,
+        addrs: Vec<Address>,
+    ) -> Result<EDKTransactionDetails, bdk::Error> {
         let scripts: Vec<elements::Script> = addrs
             .iter()
             .map(|x| x.script_pubkey().into_bytes())
@@ -225,8 +209,6 @@ where
         Ok(self.download_txs_with_height(flattened, &scripts)?)
     }
 
-
-
     fn download_txs_with_height(
         &self,
         history_txs_id: Vec<GetHistoryRes>,
@@ -235,14 +217,9 @@ where
         let mut txs = vec![];
         let mut unblinds = vec![];
         // BETxid has to be converted into bitcoin::Txid for rust-electrum-client
-        let txs_to_download: Vec<bitcoin::Txid> = history_txs_id
-            .iter()
-            .map(|x| x.tx_hash)
-            .collect();
-        let txs_height: Vec<i32> = history_txs_id
-            .iter()
-            .map(|x| x.height)
-            .collect();
+        let txs_to_download: Vec<bitcoin::Txid> =
+            history_txs_id.iter().map(|x| x.tx_hash).collect();
+        let txs_height: Vec<i32> = history_txs_id.iter().map(|x| x.height).collect();
         if txs_to_download.is_empty() {
             Ok(EDKTransactionDetails::default())
         } else {
@@ -256,10 +233,14 @@ where
                 let tx: elements::Transaction = elm_des(&vec).unwrap();
                 txs_downloaded.push(tx);
             }
-            let txs_downloaded_with_height:Vec<TxWithHeight> = txs_downloaded.iter()
-                                                            .zip(txs_height.iter())
-                                                            .map(|(t,h)| TxWithHeight{tx: t.to_owned(), tx_height:h.to_owned()})
-                                                            .collect();
+            let txs_downloaded_with_height: Vec<TxWithHeight> = txs_downloaded
+                .iter()
+                .zip(txs_height.iter())
+                .map(|(t, h)| TxWithHeight {
+                    tx: t.to_owned(),
+                    tx_height: h.to_owned(),
+                })
+                .collect();
             //let mut previous_txs_to_download = HashSet::new();
             for tx in txs_downloaded_with_height.into_iter() {
                 let txid = tx.tx.txid();
@@ -373,7 +354,7 @@ where
 
     pub fn try_unblind(
         &self,
-        outpoint: elements::OutPoint,
+        _outpoint: elements::OutPoint,
         output: elements::TxOut,
     ) -> Result<TxOutSecrets, bdk::Error> {
         match (output.asset, output.value, output.nonce) {
@@ -389,8 +370,8 @@ where
                 //println!("Unblinded outpoint:{} asset:{} value:{}", outpoint, tx_out_secrets.asset.to_string(), tx_out_secrets.value);
                 //TODO add cutom Error enum and mapping between bdk and edk errors
                 match r_tx_out_secrets {
-                    Ok(tx_o_s) => {Ok(tx_o_s)}
-                    Err(_) => {Err(bdk::Error::Generic("unbinging error".into()))}
+                    Ok(tx_o_s) => Ok(tx_o_s),
+                    Err(_) => Err(bdk::Error::Generic("unbinging error".into())),
                 }
             }
             (Asset::Explicit(asset_id), confidential::Value::Explicit(satoshi), _) => {
@@ -407,8 +388,4 @@ where
             _ => Err(bdk::Error::Generic("Unexpected asset/value/nonce".into())),
         }
     }
-
 }
-
-fn main() {}
-
