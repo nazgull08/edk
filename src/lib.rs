@@ -7,6 +7,7 @@ pub extern crate elements_miniscript as miniscript;
 pub extern crate log;
 pub extern crate serde;
 
+use bdk::{TxBuilder, wallet};
 use miniscript::elements::confidential::{
     self, Asset, AssetBlindingFactor, Nonce, ValueBlindingFactor,
 };
@@ -20,6 +21,10 @@ use miniscript::{Descriptor, DescriptorPublicKey};
 use bdk::database::BatchDatabase;
 use bdk::electrum_client::{Client, ElectrumApi, GetHistoryRes};
 use log::*;
+
+use std::rc::Rc;
+use std::marker::PhantomData;
+
 
 pub enum ScriptType {
     P2shP2wpkh = 0,
@@ -388,4 +393,20 @@ where
             _ => Err(bdk::Error::Generic("Unexpected asset/value/nonce".into())),
         }
     }
+
+    pub fn send_tx(&self) -> Result<String,bdk::Error>{
+        let d = &self.descriptor;
+        let cd = &self.descriptor;
+        let n = &self.network;
+        let m = &self.database;
+        println!("===============================");
+        println!("d: {:?}",d);
+        println!("cd: {:?}",cd);
+        println!("n: {:?}",n);
+        println!("===============================");
+        Ok("test".to_string()) 
+        //let w = bdk::wallet::Wallet::new(d, Some(cd),n,m);
+    }
+
 }
+
