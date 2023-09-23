@@ -294,11 +294,11 @@ dependencies = [
 [[package]]
 name = "elements-miniscript"
 version = "0.1.0"
-source = "git+https://github.com/lemarwin/elements-miniscript.git?rev=f745a27639e073c6690b5b7229821fca439ff247#f745a27639e073c6690b5b7229821fca439ff247"
+source = "git+https://github.com/lemarwin/elements-miniscript.git#8a626fcda139d5e0103d29e7973609af7f21cb74"
 dependencies = [
  "bitcoin 0.29.2",
  "elements",
- "miniscript 9.0.0",
+ "miniscript 9.0.1",
 ]
 
 [[package]]
@@ -400,8 +400,8 @@ dependencies = [
 
 [[package]]
 name = "miniscript"
-version = "9.0.0"
-source = "git+https://github.com/rust-bitcoin/rust-miniscript?rev=9.0.0#a7bfff46b15bd42c12da4ef39d8769f64ade848c"
+version = "9.0.1"
+source = "git+https://github.com/rust-bitcoin/rust-miniscript?rev=9.0.1#424a57a0618e343f630eefe14bf5e577515ce081"
 dependencies = [
  "bitcoin 0.29.2",
 ]
